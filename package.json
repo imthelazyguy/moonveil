@@ -1,0 +1,17 @@
+{
+  "name": "moonveil",
+  "version": "1.0.0",
+  "description": "Moonveil - A Discord Werewolf game bot with voice chat, dynamic embeds, and Firestore.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": ["discord", "werewolf", "moonveil", "game-bot"],
+  "author": "YourNameHere",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.3.1",
+    "firebase-admin": "^11.10.1"
+  }
+}
