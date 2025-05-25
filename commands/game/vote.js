@@ -1,4 +1,5 @@
-// commands/game/vote.js const { SlashCommandBuilder } = require("@discordjs/builders"); const { EmbedBuilder } = require("discord.js"); const { getGame, setGame } = require("../../utils/dbUtils");
+// commands/game/vote.js 
+const { SlashCommandBuilder } = require("@discordjs/builders"); const { EmbedBuilder } = require("discord.js"); const { getGame, setGame } = require("../../utils/dbUtils");
 
 module.exports = { data: new SlashCommandBuilder() .setName("vote") .setDescription("Vote to eliminate a player.") .addUserOption(option => option.setName("target").setDescription("Choose a player to vote against").setRequired(true)),
 
