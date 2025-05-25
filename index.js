@@ -21,34 +21,29 @@ const client = new Client({
   partials: [Partials.Channel, Partials.Message]
 });
 
-client.commands = new Collection();
-client.aliases = new Collection();
 client.db = db;
+client.commands = new Collection();
 
-// Load Commands
+// Load commands
 for (const folder of fs.readdirSync('./commands')) {
   const folderPath = path.join(__dirname, 'commands', folder);
   for (const file of fs.readdirSync(folderPath).filter(f => f.endsWith('.js'))) {
     const cmd = require(path.join(folderPath, file));
     if (cmd.data) client.commands.set(cmd.data.name, cmd);
-    if (cmd.name && cmd.aliases) {
-      client.aliases.set(cmd.name, cmd);
-      for (const a of cmd.aliases) client.aliases.set(a, cmd);
-    }
   }
 }
 
-// Load Events from events/client
-for (const file of fs.readdirSync(path.join(__dirname, 'events', 'client')).filter(f => f.endsWith('.js'))) {
-  const event = require(path.join(__dirname, 'events', 'client', file));
-  if (event.once) {
-    client.once(event.name, (...args) => event.execute(...args, client));
-  } else {
-    client.on(event.name, (...args) => event.execute(...args, client));
-  }
+// Load client events
+for (const file of fs.readdirSync('./events/client').filter(f => f.endsWith('.js'))) {
+  const evt = require(`./events/client/${file}`);
+  client[evt.once ? 'once' : 'on'](evt.name, (...args) => evt.execute(...args, client));
 }
 
-// Global unhandled rejection handler
+// Load interaction handlers
+for (const file of fs.readdirSync('./events/interaction').filter(f => f.endsWith('.js'))) {
+  const handler = require(`./events/interaction/${file}`);
+  client.on('interactionCreate', (i) => handler.execute(i, client));
+}
+
 process.on('unhandledRejection', console.error);
-
 client.login(process.env.TOKEN);
