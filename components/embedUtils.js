@@ -1,7 +1,7 @@
 const { EmbedBuilder } = require('discord.js');
 
-
- //* Creates a standard Moonveil-styled embed.
+/**
+ * Creates a standard Moonveil-styled embed.
  * @param {Object} options - Options for embed content.
  * @param {string} options.title - Title of the embed.
  * @param {string} options.description - Description or main content.
@@ -9,7 +9,7 @@ const { EmbedBuilder } = require('discord.js');
  * @param {string} [options.color] - Hex color (defaults to Moonveil purple).
  * @param {Array} [options.fields] - Optional array of fields [{ name, value, inline }]
  * @returns {EmbedBuilder}
- 
+ */
 function createEmbed({ title, description, footer, color = '#6D28D9', fields = [] }) {
   const embed = new EmbedBuilder()
     .setTitle(title)
@@ -23,11 +23,11 @@ function createEmbed({ title, description, footer, color = '#6D28D9', fields = [
   return embed;
 }
 
-
- //* Creates an error embed
+/**
+ * Creates an error embed
  * @param {string} errorMessage
  * @returns {EmbedBuilder}
- 
+ */
 function errorEmbed(errorMessage) {
   return new EmbedBuilder()
     .setTitle('Something went wrong!')
@@ -36,10 +36,11 @@ function errorEmbed(errorMessage) {
     .setTimestamp();
 }
 
-// Creates a success embed
+/**
+ * Creates a success embed
  * @param {string} message
  * @returns {EmbedBuilder}
- 
+ */
 function successEmbed(message) {
   return new EmbedBuilder()
     .setTitle('Success!')
@@ -48,11 +49,11 @@ function successEmbed(message) {
     .setTimestamp();
 }
 
-
- //* Creates a loading-style embed using emoji animation
+/**
+ * Creates a loading-style embed using emoji animation
  * @param {string} message
  * @returns {EmbedBuilder}
- 
+ */
 function loadingEmbed(message = 'Loading...') {
   return new EmbedBuilder()
     .setTitle('Please wait')
