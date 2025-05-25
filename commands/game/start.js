@@ -1,95 +1,55 @@
 // commands/game/start.js
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { getPlayersInLobby, updatePlayerRole, createGameDoc } = require('../../utils/dbUtils');
-const rolesConfig = require('../../config/roles.json');
+
+const { SlashCommandBuilder, ChannelType, PermissionFlagsBits } = require('discord.js');
+const { sendAdminControlPanel } = require('../../components/admin/controlPanel');
+const { initializeGame } = require('../../components/game/gameInitializer');
+const { setGameConfig } = require('../../utils/dbUtils');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('start')
-    .setDescription('Start the Moonveil game and assign roles (host only)'),
-  async execute(interaction, client) {
+    .setDescription('Start a new Werewolf game in this server')
+    .addChannelOption(option =>
+      option.setName('voice_channel')
+        .setDescription('Voice channel where players will join')
+        .setRequired(true)
+        .addChannelTypes(ChannelType.GuildVoice)
+    ),
+
+  async execute(interaction) {
     try {
-      const guildId = interaction.guildId;
-      const userId = interaction.user.id;
+      const voiceChannel = interaction.options.getChannel('voice_channel');
 
-      // Check if game already running
-      const gameDoc = await client.db.collection('games').doc(guildId).get();
-      if (gameDoc.exists) {
-        return interaction.reply({ content: 'A game is already running in this server.', ephemeral: true });
+      // Permission check
+      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+        return await interaction.reply({ content: 'You do not have permission to start a game.', ephemeral: true });
       }
 
-      // Get players in lobby
-      const players = await getPlayersInLobby(client.db, guildId);
-      if (players.length === 0) {
-        return interaction.reply({ content: 'No players in lobby to start the game.', ephemeral: true });
-      }
+      await interaction.deferReply({ ephemeral: true });
 
-      // Check if user is host or assign host as command user
-      // Create game doc with host and basic info
-      await createGameDoc(client.db, guildId, userId);
+      // Set up game in database
+      const hostId = interaction.user.id;
+      const guildId = interaction.guild.id;
 
-      // Role assignment logic (copied from assignRoles.js)
-      let rolePool = [];
-      rolesConfig.forEach(role => {
-        for (let i = 0; i < role.count; i++) {
-          rolePool.push(role.name);
-        }
+      await setGameConfig(guildId, {
+        host: hostId,
+        voiceChannelId: voiceChannel.id,
+        phase: 'waiting',
+        players: [],
+        roles: [],
+        votes: {},
+        gameActive: true,
       });
 
-      if (rolePool.length !== players.length) {
-        return interaction.reply({
-          content: `Role counts (${rolePool.length}) do not match number of players (${players.length}). Adjust roles.json.`,
-          ephemeral: true,
-        });
-      }
+      await initializeGame(interaction.guild, voiceChannel, hostId);
 
-      // Shuffle rolePool
-      for (let i = rolePool.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [rolePool[i], rolePool[j]] = [rolePool[j], rolePool[i]];
-      }
+      // Send control panel
+      await sendAdminControlPanel(interaction.channel, hostId);
 
-      // Assign roles and mark players alive
-      for (let i = 0; i < players.length; i++) {
-        await updatePlayerRole(client.db, guildId, players[i].id, rolePool[i], true);
-      }
-
-      // DM players their roles
-      for (const player of players) {
-        try {
-          const member = await interaction.guild.members.fetch(player.id);
-          const playerDoc = await client.db
-            .collection('games')
-            .doc(guildId)
-            .collection('players')
-            .doc(player.id)
-            .get();
-          const assignedRole = playerDoc.data()?.role ?? 'Unknown';
-
-          await member.send({
-            embeds: [
-              new EmbedBuilder()
-                .setTitle('Your Role in Moonveil')
-                .setDescription(`You have been assigned the role **${assignedRole}**.`)
-                .setColor('#6a0dad')
-                .setFooter({ text: 'Keep it secret, keep it safe.' }),
-            ],
-          });
-        } catch (dmError) {
-          console.error(`Failed to DM player ${player.id}`, dmError);
-        }
-      }
-
-      const embed = new EmbedBuilder()
-        .setTitle('Game Started')
-        .setDescription('Roles have been assigned and sent to players via DM. Let the game begin!')
-        .setColor('#6a0dad')
-        .setTimestamp();
-
-      return interaction.reply({ embeds: [embed] });
+      await interaction.editReply('Game setup is complete. Admin control panel sent.');
     } catch (error) {
-      console.error('Error in start command:', error);
-      return interaction.reply({ content: 'An error occurred while starting the game.', ephemeral: true });
+      console.error('Error in /start command:', error);
+      await interaction.editReply('An error occurred while starting the game.');
     }
-  },
+  }
 };
