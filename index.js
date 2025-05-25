@@ -22,30 +22,25 @@ const client = new Client({
 });
 
 client.commands = new Collection();
-client.legacyCommands = new Collection();
 client.aliases = new Collection();
 client.db = db;
 
 // Load Commands
-const commandFolders = fs.readdirSync('./commands');
-for (const folder of commandFolders) {
-  const commandFiles = fs.readdirSync(`./commands/${folder}`).filter(file => file.endsWith('.js'));
-  for (const file of commandFiles) {
-    const command = require(`./commands/${folder}/${file}`);
-    if (command.data) {
-      client.commands.set(command.data.name, command);
-    }
-    if (command.name && command.aliases) {
-      client.legacyCommands.set(command.name, command);
-      command.aliases.forEach(alias => client.aliases.set(alias, command.name));
+for (const folder of fs.readdirSync('./commands')) {
+  const folderPath = path.join(__dirname, 'commands', folder);
+  for (const file of fs.readdirSync(folderPath).filter(f => f.endsWith('.js'))) {
+    const cmd = require(path.join(folderPath, file));
+    if (cmd.data) client.commands.set(cmd.data.name, cmd);
+    if (cmd.name && cmd.aliases) {
+      client.aliases.set(cmd.name, cmd);
+      for (const a of cmd.aliases) client.aliases.set(a, cmd);
     }
   }
 }
 
-// Load Events
-const eventFiles = fs.readdirSync('./events').filter(file => file.endsWith('.js'));
-for (const file of eventFiles) {
-  const event = require(`./events/${file}`);
+// Load Events from events/client
+for (const file of fs.readdirSync(path.join(__dirname, 'events', 'client')).filter(f => f.endsWith('.js'))) {
+  const event = require(path.join(__dirname, 'events', 'client', file));
   if (event.once) {
     client.once(event.name, (...args) => event.execute(...args, client));
   } else {
@@ -53,8 +48,7 @@ for (const file of eventFiles) {
   }
 }
 
-process.on('unhandledRejection', error => {
-  console.error('Unhandled promise rejection:', error);
-});
+// Global unhandled rejection handler
+process.on('unhandledRejection', console.error);
 
 client.login(process.env.TOKEN);
