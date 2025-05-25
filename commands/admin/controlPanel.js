@@ -1,88 +1,52 @@
-// commands/admin/controlPanel.js
+// components/admin/controlPanel.js
 
-const {
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  EmbedBuilder,
-  PermissionFlagsBits
-} = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } = require('discord.js');
 
 module.exports = {
-  data: {
-    name: 'controlpanel',
-    description: 'Display the control panel for managing voice & game phases',
-  },
-  async execute(interaction, client) {
+  async sendAdminControlPanel(channel, hostId) {
     try {
-      // Check if the user is the host or has Admin perms
-      const member = interaction.member;
-      if (
-        !member.permissions.has(PermissionFlagsBits.Administrator) &&
-        !await client.db.collection('games').doc(interaction.guildId).get().then(doc => doc.exists && doc.data().hostId === member.id)
-      ) {
-        return interaction.reply({
-          content: 'Only the game host or an admin can use this command.',
-          ephemeral: true,
-        });
-      }
-
       const embed = new EmbedBuilder()
-        .setTitle('Moonveil Game Control Panel')
-        .setDescription('Manage voice channel and game phases with the buttons below.')
-        .setColor(0x6a0dad)
-        .setFooter({ text: 'Only visible to the host or admins.' });
+        .setTitle('Moonveil: Admin Control Panel')
+        .setDescription('Use the buttons below to control the game phases and player voice state.\n\n**Game Host:** <@' + hostId + '>')
+        .setColor('#6A0DAD')
+        .setFooter({ text: 'Only the game host or server admins can use these controls.' });
 
-      const row1 = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId('mute_all')
-          .setLabel('Mute All')
-          .setStyle(ButtonStyle.Danger),
+      const row = new ActionRowBuilder()
+        .addComponents(
+          new ButtonBuilder()
+            .setCustomId('mute_all')
+            .setLabel('Mute All')
+            .setStyle(ButtonStyle.Danger)
+            .setEmoji('🔇'),
 
-        new ButtonBuilder()
-          .setCustomId('unmute_all')
-          .setLabel('Unmute All')
-          .setStyle(ButtonStyle.Success),
+          new ButtonBuilder()
+            .setCustomId('unmute_all')
+            .setLabel('Unmute All')
+            .setStyle(ButtonStyle.Success)
+            .setEmoji('🔊'),
 
-        new ButtonBuilder()
-          .setCustomId('lock_vc')
-          .setLabel('Lock VC')
-          .setStyle(ButtonStyle.Secondary),
+          new ButtonBuilder()
+            .setCustomId('start_phase')
+            .setLabel('Start Phase')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('⏱️'),
 
-        new ButtonBuilder()
-          .setCustomId('unlock_vc')
-          .setLabel('Unlock VC')
-          .setStyle(ButtonStyle.Primary)
-      );
+          new ButtonBuilder()
+            .setCustomId('next_phase')
+            .setLabel('Next Phase')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('➡️'),
 
-      const row2 = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId('start_discussion')
-          .setLabel('Start Discussion')
-          .setStyle(ButtonStyle.Primary),
+          new ButtonBuilder()
+            .setCustomId('end_game')
+            .setLabel('End Game')
+            .setStyle(ButtonStyle.Danger)
+            .setEmoji('🛑'),
+        );
 
-        new ButtonBuilder()
-          .setCustomId('start_rebuttal')
-          .setLabel('Start Rebuttal')
-          .setStyle(ButtonStyle.Secondary),
-
-        new ButtonBuilder()
-          .setCustomId('start_vote')
-          .setLabel('Start Voting')
-          .setStyle(ButtonStyle.Success)
-      );
-
-      await interaction.reply({
-        embeds: [embed],
-        components: [row1, row2],
-        ephemeral: true,
-      });
-    } catch (err) {
-      console.error('Control panel error:', err);
-      await interaction.reply({
-        content: 'There was an error while trying to open the control panel.',
-        ephemeral: true,
-      });
+      await channel.send({ embeds: [embed], components: [row] });
+    } catch (error) {
+      console.error('Error sending admin control panel:', error);
     }
   }
 };
