@@ -1,4 +1,4 @@
-**File: /components/phaseManager.js**
+//File: /components/phaseManager.js
 
 const { updateGameState, getGameState } = require('../utils/dbUtils');
 const { generatePhaseEmbed } = require('../utils/embedUtils');
