@@ -1,28 +1,57 @@
-const { EmbedBuilder } = require('discord.js');
+const rolesData = require('../data/roles.json'); // Holds metadata for all roles
 
-const assignRoles = async (game, client) => {
-  try {
-    const shuffledPlayers = game.players.sort(() => Math.random() - 0.5);
-    const roles = [...game.roles];
+class RoleManager {
+  constructor() {
+    this.availableRoles = new Map(); // name => data
+    this.loadRoles();
+  }
+
+  loadRoles() {
+    for (const role of rolesData) {
+      this.availableRoles.set(role.name.toLowerCase(), role);
+    }
+  }
+
+  /**
+   * Assign roles to players based on config or default pool
+   * @param {Array} players - Array of Discord user objects
+   * @param {Array} roleNames - Optional array of role names to assign
+   * @returns {Map<userId, roleObject>}
+   */
+  assignRoles(players, roleNames = []) {
+    const assignments = new Map();
+    const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
+    const rolePool = roleNames.length > 0 ? roleNames : Array.from(this.availableRoles.keys());
+
+    if (shuffledPlayers.length > rolePool.length) throw new Error('Not enough roles for players');
 
     for (let i = 0; i < shuffledPlayers.length; i++) {
-      const member = await game.guild.members.fetch(shuffledPlayers[i]);
-      const role = roles[i];
-      game.playerData[member.id] = { role, alive: true, powerUsed: false };
-
-      const embed = new EmbedBuilder()
-        .setTitle(`Your Role: ${role.name}`)
-        .setDescription(role.description)
-        .addFields({ name: 'Allegiance', value: role.team, inline: true })
-        .setColor(role.color || '#8b5cf6');
-
-      if (role.image) embed.setThumbnail(role.image);
-
-      await member.send({ embeds: [embed] });
+      const user = shuffledPlayers[i];
+      const roleKey = rolePool[i].toLowerCase();
+      const role = this.availableRoles.get(roleKey);
+      if (!role) throw new Error(`Unknown role: ${roleKey}`);
+      assignments.set(user.id, role);
     }
-  } catch (error) {
-    console.error('[roleManager] Error assigning roles:', error);
-  }
-};
 
-module.exports = { assignRoles };
+    return assignments;
+  }
+
+  /**
+   * Get role data by name
+   * @param {string} roleName
+   * @returns {Object}
+   */
+  getRole(roleName) {
+    return this.availableRoles.get(roleName.toLowerCase());
+  }
+
+  /**
+   * Get all roles for display or selection
+   * @returns {Array}
+   */
+  listRoles() {
+    return Array.from(this.availableRoles.values());
+  }
+}
+
+module.exports = new RoleManager();
